@@ -1,1 +1,1 @@
-# Electronics-of-MIDI-Controllers
+# Electronics of MIDI Controllers
