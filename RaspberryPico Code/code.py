@@ -1,30 +1,61 @@
-# Passive buzzer connected to GP1 and GND
-# Button connected to GP0 and GND
-# A 440 Hz tone plays only while the button is held down.
+# 03 - Layer repeated presses of the same WAV using an audio mixer
+# CircuitPython / Raspberry Pi Pico RP2040 / MAX98357A
+# Button: GP0 to GND
+# I2S: BCLK GP2, LRC GP3, DIN GP4
+# Place a mono 16-bit 22050 Hz PCM sound.wav beside code.py.
 
-import board       # Allows access to the Raspberry Pi Pico's GPIO pins
-import digitalio   # Allows us to use digital input and output pins
-import pwmio       # Allows us to control the buzzer using PWM
-import time        # Allows us to add delays
+import board
+import digitalio
+import audiobusio
+import audiocore
+import audiomixer
+import time
 
-# Set up the button on GPIO pin GP0
+VOICES = 4  # Try 2, 4 or 6 depending on available memory/performance.
+SAMPLE_RATE = 22050
+DEBOUNCE = 0.04
+
 button = digitalio.DigitalInOut(board.GP0)
-
-# Configure the button as an input with an internal pull-up resistor
 button.switch_to_input(pull=digitalio.Pull.UP)
 
-# Set up the buzzer on GPIO pin GP1
-# Set the frequency to 440 Hz and start with the buzzer switched off
-buzzer = pwmio.PWMOut(board.GP1, frequency=440, duty_cycle=0)
+audio = audiobusio.I2SOut(
+    bit_clock=board.GP2,
+    word_select=board.GP3,
+    data=board.GP4,
+)
 
-# Repeat the following instructions continuously
+mixer = audiomixer.Mixer(
+    voice_count=VOICES,
+    sample_rate=SAMPLE_RATE,
+    channel_count=1,
+    bits_per_sample=16,
+    samples_signed=True,
+    buffer_size=2048,
+)
+audio.play(mixer)
+
+# Each simultaneous voice needs its own independent file reader.
+# All readers point to the same sound.wav (no duplicate files required).
+files = [open("mono1.wav", "rb") for _ in range(VOICES)]
+samples = [audiocore.WaveFile(f) for f in files]
+
+for voice in mixer.voice:
+    voice.level = 0.2  # Conservative level to reduce clipping on overlaps.
+
+next_voice = 0
+previous = True
+last_press = 0.0
+
 while True:
+    current = button.value
+    now = time.monotonic()
 
-    # Check if the button is pressed
-    # button.value is False when pressed because the button uses a pull-up resistor
-    # If pressed, set the duty cycle to 32768 to turn the buzzer on
-    # If not pressed, set the duty cycle to 0 to turn the buzzer off
-    buzzer.duty_cycle = 32768 if not button.value else 0
+    if previous and not current and now - last_press >= DEBOUNCE:
+        last_press = now
+        mixer.voice[next_voice].play(samples[next_voice])
+        print("Voice", next_voice + 1)
+        # After the last voice, reuse voice 1 (restarts it if still playing).
+        next_voice = (next_voice + 1) % VOICES
 
-    # Wait 0.01 seconds before checking the button again
-    time.sleep(0.01)
+    previous = current
+    time.sleep(0.005)
