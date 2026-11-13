@@ -11,7 +11,7 @@ import audiocore
 import audiomixer
 import time
 
-VOICES = 4  # Try 2, 4 or 6 depending on available memory/performance.
+VOICES = 2  # Try 2, 4 or 6 depending on available memory/performance.
 SAMPLE_RATE = 22050
 DEBOUNCE = 0.04
 
