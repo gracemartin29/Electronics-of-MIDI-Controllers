@@ -1,4 +1,3 @@
-# Electronics of MIDI Controllers
+# Masterclass #5: Electronics of MIDI Controllers
 
-https://docs.circuitpython.org/en/latest/shared-bindings/touchio/ 
-https://diyelectromusic.com/2023/06/12/raspberry-pi-pico-capacitive-touch/
+This repository includes files of my exploration from Masterclass #5. In this masterclass, taught by [Frazer Merrick](https://frazermerrick.com/), I worked on implementing different ways of embedding audio. Using components like PMW buzzers, piezo discs, speakers and I2S audio modules, controlled by Raspberry Pi Picos, to make said different embedded audio devices.
