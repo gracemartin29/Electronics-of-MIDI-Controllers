@@ -1,40 +1,31 @@
-# 02 - Restart sound.wav from the beginning on every button press
-# CircuitPython / Raspberry Pi Pico RP2040 / MAX98357A
-# Button: GP0 to GND
-# I2S: BCLK GP2, LRC GP3, DIN GP4
-# Place sound.wav beside code.py on CIRCUITPY.
-
+# Passive buzzer on GP1 -> GND; button GP0 -> GND
+# Melody loops while button is held; stops when released.
 import board
 import digitalio
-import audiobusio
-import audiocore
+import pwmio
 import time
-import audiomp3
 
 button = digitalio.DigitalInOut(board.GP0)
 button.switch_to_input(pull=digitalio.Pull.UP)
-
-audio = audiobusio.I2SOut(
-    bit_clock=board.GP2,
-    word_select=board.GP3,
-    data=board.GP4,
-)
-
-mp3 = audiomp3.MP3Decoder("acoustic-guitar.mp3")
-
-previous = True
-last_press = 0.0
-DEBOUNCE = 0.04
+buzzer = pwmio.PWMOut(board.GP1, frequency=440,
+                       duty_cycle=0, variable_frequency=True)
+# (frequency in Hz, duration in seconds)
+MELODY = [(262, 0.22), (330, 0.22), (392, 0.22),
+          (523, 0.36), (392, 0.22), (330, 0.22)]
+index = 0
+note_started = time.monotonic()
 
 while True:
-    current = button.value
     now = time.monotonic()
-
-    if previous and not current and now - last_press >= DEBOUNCE:
-        last_press = now
-        # Playing the same sample again restarts it from the beginning.
-        audio.stop()
-        audio.play(mp3)
-
-    previous = current
-    time.sleep(0.005)
+    if button.value:  # released
+        frequency, duration = MELODY[index]
+        buzzer.frequency = frequency
+        buzzer.duty_cycle = 32768
+        if now - note_started >= duration:
+            index = (index + 1) % len(MELODY)
+            note_started = now
+    else:  # held
+        buzzer.duty_cycle = 0
+        index = 0
+        note_started = now
+    time.sleep(0.01)
